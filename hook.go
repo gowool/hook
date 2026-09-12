@@ -21,10 +21,10 @@ package hook
 // -------------------------------------------------------------------
 
 import (
+	"slices"
 	"sort"
 	"sync"
-
-	"github.com/google/uuid"
+	"uuid"
 )
 
 // Handler defines a single Hook handler.
@@ -88,7 +88,7 @@ func (h *Hook[T]) Bind(handler *Handler[T]) string {
 	var exists bool
 
 	if handler.ID == "" {
-		handler.ID = uuid.NewString()
+		handler.ID = uuid.New().String()
 	} else {
 		// replace existing
 		for i, existing := range h.handlers {
@@ -128,8 +128,8 @@ func (h *Hook[T]) Unbind(idsToRemove ...string) {
 	defer h.mu.Unlock()
 
 	for _, id := range idsToRemove {
-		for i := len(h.handlers) - 1; i >= 0; i-- {
-			if h.handlers[i].ID == id {
+		for i, v := range slices.Backward(h.handlers) {
+			if v.ID == id {
 				h.handlers = append(h.handlers[:i], h.handlers[i+1:]...)
 				break // for now stop on the first occurrence since we don't allow handlers with duplicated ids
 			}
@@ -171,8 +171,7 @@ func (h *Hook[T]) Trigger(event T, oneOffHandlerFuncs ...func(T) error) error {
 
 	event.setNextFunc(nil) // reset in case the event is being reused
 
-	for i := len(handlers) - 1; i >= 0; i-- {
-		i := i
+	for i := range slices.Backward(handlers) {
 		old := event.nextFunc()
 		event.setNextFunc(func() error {
 			event.setNextFunc(old)
